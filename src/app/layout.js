@@ -12,7 +12,7 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata = {
   title: "HATHAX · Plataforma Contable Inteligente",
   description: "Plataforma contable inteligente para gestión multi-empresa.",
-  icons: { icon: "/modulo/favicon.png" },
+  icons: { icon: "/brand/favicon.ico" },
 };
 
 export default function RootLayout({ children }) {

@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }) {
       {/* Sidebar Lateral */}
       <aside className="w-64 border-r border-white/10 flex flex-col" style={{ backgroundColor: '#2d2d2e' }}>
         <div className="p-4 border-b border-white/10 flex items-center justify-center">
-          <Image priority={true} src="/logo.png" alt="HATHAX" width={200} height={50} className="w-full h-auto object-contain" />
+          <Image priority={true} src="/brand/logo.png" alt="HATHAX" width={200} height={50} className="w-full h-auto object-contain" />
         </div>
         
         <nav className="flex-1 p-4 space-y-2">

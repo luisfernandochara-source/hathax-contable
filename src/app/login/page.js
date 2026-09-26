@@ -100,7 +100,7 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="text-center -mt-8 -mb-12 relative z-0 pointer-events-none">
             <div className="inline-flex items-center justify-center">
-              <Image priority={true} src="/logo.png" alt="HATHAX Logo" width={400} height={160} className="h-40 md:h-52 w-auto object-contain scale-[1.8] translate-x-6 -translate-y-4" />
+              <Image priority={true} src="/brand/logo.png" alt="HATHAX Logo" width={400} height={160} className="h-40 md:h-52 w-auto object-contain scale-[1.8] translate-x-6 -translate-y-4" />
             </div>
           </div>
 

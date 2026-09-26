@@ -5,7 +5,7 @@ export default function Navbar() {
   return (
     <nav>
       <Link className="logo" href="/">
-        <Image src="/modulo/favicon.png" alt="HATHAX" width={68} height={68} />
+        <Image src="/brand/logo.png" alt="HATHAX" width={68} height={68} />
         HATHAX
       </Link>
       <div className="links">

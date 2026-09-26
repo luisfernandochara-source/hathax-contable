@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="w">
         <div>
           <Link className="logo" href="/">
-            <Image src="/modulo/favicon.png" alt="HATHAX" width={68} height={68} />
+            <Image src="/brand/logo.png" alt="HATHAX" width={68} height={68} />
             HATHAX
           </Link>
           <p style={{ margin: "8px 0 0" }}>
