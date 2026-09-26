@@ -1,0 +1,1022 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chara Contadores · Módulo Contable</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Firebase SDK -->
+
+
+
+  <script type="module" crossorigin src="/modulo/assets/index-BYBaqeVd.js"></script>
+  <link rel="stylesheet" crossorigin href="/modulo/assets/index-TbJeOnUV.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA DE LOGIN — Chara Contadores
+══════════════════════════════════════════ -->
+<div id="cc-login-screen" style="display:flex">
+  <div class="cc-login-box">
+
+    <div class="cc-login-brand">
+      <div class="cc-login-logo"><i class="fa-solid fa-chart-line"></i></div>
+      <div class="cc-login-title">Chara Contadores</div>
+      <div class="cc-login-sub">Módulo Contable · Acceso seguro</div>
+    </div>
+
+    <div class="cc-login-body">
+      <div id="cc-err" class="cc-login-err">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="cc-err-txt">Correo o contraseña incorrectos.</span>
+      </div>
+
+      <label class="cc-login-label" for="cc-email">Correo electrónico</label>
+      <input id="cc-email" type="email" class="cc-login-inp"
+        placeholder="usuario@empresa.com"
+        onkeydown="if(event.key==='Enter')document.getElementById('cc-pass').focus()">
+
+      <label class="cc-login-label" for="cc-pass">Contraseña</label>
+      <input id="cc-pass" type="password" class="cc-login-inp"
+        placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')ccDoLogin()">
+
+      <button id="cc-login-btn" class="cc-login-btn" onclick="ccDoLogin()">
+        <i class="fa-solid fa-lock-open"></i> Ingresar
+      </button>
+
+      <div class="cc-login-reset">
+        ¿Olvidaste tu contraseña?
+        <a onclick="ccResetPass()">Recuperar acceso</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCRIPT DE LOGIN ══ -->
+<script>
+function ccDoLogin(){
+  const email = document.getElementById('cc-email').value.trim();
+  const pass  = document.getElementById('cc-pass').value;
+  const btn   = document.getElementById('cc-login-btn');
+  const errEl = document.getElementById('cc-err');
+  const errTx = document.getElementById('cc-err-txt');
+
+  errEl.style.display='none';
+  if(!email||!pass){
+    errTx.textContent='Completa correo y contraseña.';
+    errEl.style.display='flex'; return;
+  }
+  btn.disabled=true;
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Ingresando…';
+
+  // Esperar a que Firebase Auth esté disponible
+  const tryLogin=()=>{
+    if(!window._fbSignIn){setTimeout(tryLogin,100);return;}
+    window._fbSignIn(email,pass)
+      .catch(err=>{
+        btn.disabled=false;
+        btn.innerHTML='<i class="fa-solid fa-lock-open"></i> Ingresar';
+        let msg='Correo o contraseña incorrectos.';
+        if(err.code==='auth/too-many-requests') msg='Demasiados intentos. Espera unos minutos.';
+        if(err.code==='auth/user-not-found')    msg='No existe una cuenta con ese correo.';
+        if(err.code==='auth/invalid-email')     msg='El correo no tiene un formato válido.';
+        errTx.textContent=msg;
+        errEl.style.display='flex';
+      });
+  };
+  tryLogin();
+}
+
+function ccResetPass(){
+  const email = document.getElementById('cc-email').value.trim();
+  if(!email){
+    const errEl=document.getElementById('cc-err');
+    document.getElementById('cc-err-txt').textContent='Ingresa tu correo primero para recuperar la contraseña.';
+    errEl.style.display='flex'; return;
+  }
+  const tryReset=()=>{
+    if(!window._fbReset){setTimeout(tryReset,100);return;}
+    window._fbReset(email).then(()=>{
+      const errEl=document.getElementById('cc-err');
+      errEl.style.background='rgba(34,197,94,.12)';
+      errEl.style.borderColor='#22c55e30';
+      errEl.style.color='#4ade80';
+      document.getElementById('cc-err-txt').textContent='¡Correo de recuperación enviado! Revisa tu bandeja.';
+      errEl.style.display='flex';
+    }).catch(()=>{
+      document.getElementById('cc-err-txt').textContent='No se pudo enviar el correo. Verifica el email.';
+      document.getElementById('cc-err').style.display='flex';
+    });
+  };
+  tryReset();
+}
+
+function ccDoLogout(){
+  if(window._fbSignOut) window._fbSignOut();
+}
+</script>
+
+<!-- ══════════════════════════════════════════
+     APP PRINCIPAL (oculta hasta autenticar)
+══════════════════════════════════════════ -->
+<div id="cc-app-root" style="display:none;flex-direction:column;width:100%;min-height:100vh">
+
+<!-- NIT MODAL — WIZARD 2 PASOS -->
+<div id="nit-modal" class="mo">
+  <div class="mb fi" style="max-width:460px">
+
+    <!-- Header dinámico -->
+    <div id="nm-hdr" style="background:linear-gradient(135deg,#7c2d12,#c2410c);padding:22px 24px;display:flex;align-items:center;gap:14px;">
+      <div class="ib" style="background:rgba(255,255,255,.15)"><i class="fa-solid fa-building" style="color:#fff"></i></div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#fff">Identificación de Empresa</div>
+        <div style="font-size:.72rem;color:#fed7aa;margin-top:2px">Paso 1 de 2 — Ingresa el NIT o CC</div>
+      </div>
+    </div>
+
+    <!-- Indicador de pasos -->
+    <div style="display:flex;align-items:center;gap:0;padding:12px 24px 0;background:rgba(255,255,255,.02)">
+      <div id="nm-dot1" style="width:28px;height:28px;border-radius:50%;background:var(--o);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:900;color:#fff;flex-shrink:0">1</div>
+      <div id="nm-line" style="flex:1;height:2px;background:var(--b);margin:0 6px;transition:background .3s"></div>
+      <div id="nm-dot2" style="width:28px;height:28px;border-radius:50%;background:var(--card2);border:2px solid var(--b);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:900;color:var(--td);flex-shrink:0;transition:all .3s">2</div>
+      <div style="display:flex;gap:16px;margin-left:12px">
+        <span id="nm-lbl1" style="font-size:.62rem;font-weight:700;color:var(--oh);text-transform:uppercase;letter-spacing:.04em">NIT / CC</span>
+        <span id="nm-lbl2" style="font-size:.62rem;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.04em">Módulo</span>
+      </div>
+    </div>
+
+    <!-- PASO 1: NIT -->
+    <div id="nm-p1">
+      <div style="padding:20px 24px 8px">
+        <p style="font-size:.8rem;color:var(--ts);margin-bottom:16px;line-height:1.6">Ingresa el <strong style="color:var(--tx)">NIT o CC</strong> de la empresa con la que vas a trabajar.</p>
+        <label style="display:block;font-size:.65rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">NIT / CC (sin dígito de verificación)</label>
+        <input id="nit-i" type="text" placeholder="Ej: 900123456" maxlength="12" class="di" style="text-align:center;font-size:1.1rem;font-weight:800;font-family:monospace;letter-spacing:.1em" oninput="this.value=this.value.replace(/\D/g,'')">
+        <p id="nit-err" style="color:var(--red);font-size:.72rem;font-weight:700;margin-top:8px;display:none"><i class="fa-solid fa-circle-exclamation" style="margin-right:4px"></i>NIT inválido (mínimo 6 dígitos).</p>
+      </div>
+      <div style="padding:12px 24px 24px;display:flex;gap:8px">
+        <button onclick="skipNit()" class="btn bs" style="flex:1;justify-content:center">Omitir</button>
+        <button onclick="nitStep1Next()" class="btn bo" style="flex:2;justify-content:center"><i class="fa-solid fa-arrow-right"></i> Siguiente</button>
+      </div>
+    </div>
+
+    <!-- PASO 2: Selección de módulo -->
+    <div id="nm-p2" style="display:none">
+      <div style="padding:20px 24px 12px">
+        <p style="font-size:.8rem;color:var(--ts);margin-bottom:16px;line-height:1.5">Selecciona el <strong style="color:var(--tx)">módulo</strong> con el que vas a trabajar.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button onclick="selectModuleAndClose('compras')" class="nm-mod-btn" id="nmb-compras" style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);border-radius:12px;padding:16px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s;color:var(--tx)">
+            <i class="fa-solid fa-cart-shopping" style="font-size:1.4rem;color:var(--o)"></i>
+            <span style="font-size:.8rem;font-weight:800">Compras</span>
+            <span style="font-size:.62rem;color:var(--ts);text-align:center;line-height:1.4">Causación de facturas de proveedores</span>
+          </button>
+          <button onclick="selectModuleAndClose('ventas')" class="nm-mod-btn" id="nmb-ventas" style="background:rgba(20,184,166,.08);border:1px solid rgba(20,184,166,.25);border-radius:12px;padding:16px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s;color:var(--tx)">
+            <i class="fa-solid fa-store" style="font-size:1.4rem;color:var(--teal)"></i>
+            <span style="font-size:.8rem;font-weight:800">Ventas</span>
+            <span style="font-size:.62rem;color:var(--ts);text-align:center;line-height:1.4">Causación de facturas de clientes</span>
+          </button>
+          <button onclick="selectModuleAndClose('terceros')" class="nm-mod-btn" id="nmb-terceros" style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:12px;padding:16px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s;color:var(--tx)">
+            <i class="fa-solid fa-users" style="font-size:1.4rem;color:var(--grn)"></i>
+            <span style="font-size:.8rem;font-weight:800">Terceros</span>
+            <span style="font-size:.62rem;color:var(--ts);text-align:center;line-height:1.4">Estructura exógena DIAN (XML → XLSX)</span>
+          </button>
+          <button onclick="selectModuleAndClose('reglas')" class="nm-mod-btn" id="nmb-reglas" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:16px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s;color:var(--tx)">
+            <i class="fa-solid fa-book-open" style="font-size:1.4rem;color:var(--ind)"></i>
+            <span style="font-size:.8rem;font-weight:800">Configuración</span>
+            <span style="font-size:.62rem;color:var(--ts);text-align:center;line-height:1.4">Reglas PUC y cuentas contables</span>
+          </button>
+        </div>
+      </div>
+      <div style="padding:8px 24px 20px">
+        <button onclick="nitGoBack()" class="btn bs" style="width:100%;justify-content:center;font-size:.75rem"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+<style>
+.nm-mod-btn:hover{filter:brightness(1.15);transform:translateY(-2px);box-shadow:0 6px 20px #0004}
+</style>
+
+<div id="modal-container"></div>
+
+<!-- HEADER -->
+<header class="hbg">
+  <div style="max-width:1500px;margin:0 auto;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="width:52px;height:52px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid var(--bh);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;color:var(--o);flex-shrink:0"><img src="/modulo/favicon.png" style="width:100%;height:100%;object-fit:contain"/></div>
+      <div>
+        <div style="font-size:1.2rem;font-weight:900;color:#fff;letter-spacing:-.01em">HATHAX
+          <span style="font-size:.6rem;font-weight:700;background:#f9731620;color:#fb923c;border:1px solid #f9731640;border-radius:99px;padding:2px 8px;margin-left:8px;vertical-align:middle">Módulo Contable</span>
+        </div>
+        <div style="font-size:.68rem;color:var(--ts);margin-top:1px">Plataforma Contable Inteligente</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="nc" onclick="openNit()"><i class="fa-solid fa-building" style="color:var(--o)"></i><span style="color:var(--ts)">NIT:</span><span id="hnd" style="color:var(--oh);font-weight:800;font-family:monospace">—</span><i class="fa-solid fa-pen-to-square" style="color:var(--td);font-size:.65rem"></i></div>
+      <!-- Usuario activo + Cerrar sesión -->
+      <div id="cc-user-badge" title="Cerrar sesión" onclick="ccDoLogout()" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid #ffffff18;border-radius:8px;padding:5px 12px;cursor:pointer;transition:all .2s;font-size:.72rem">
+        <i class="fa-solid fa-circle-user" style="color:var(--oh)"></i>
+        <span id="cc-user-email" style="color:var(--ts);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span>
+        <i class="fa-solid fa-right-from-bracket" style="color:var(--td);font-size:.65rem"></i>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV CONTABLE -->
+<div class="snav">
+  <div style="max-width:1500px;margin:0 auto;padding:0 24px;display:flex;align-items:stretch;gap:0;overflow-x:auto">
+    <!-- Sub-nav Contable -->
+    <div id="sn-c" style="display:flex;align-items:center;gap:8px;padding:8px 0">
+      <!-- Botón Inicio -->
+      <button onclick="goHome()" title="Volver al inicio" style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid var(--b);color:var(--ts);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0" onmouseover="this.style.background='rgba(249,115,22,.15)';this.style.color='var(--oh)';this.style.borderColor='rgba(249,115,22,.35)'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.color='var(--ts)';this.style.borderColor='var(--b)'">
+        <i class="fa-solid fa-house" style="font-size:.85rem"></i>
+      </button>
+      <div style="display:flex;gap:4px;background:rgba(255,255,255,.04);border:1px solid var(--b);border-radius:12px;padding:4px">
+        <button id="btn-compras" class="np ao" onclick="switchContable('compras')"><i class="fa-solid fa-cart-shopping"></i> Compras</button>
+        <button id="btn-ventas" class="np off" onclick="switchContable('ventas')"><i class="fa-solid fa-store"></i> Ventas</button>
+        <button id="btn-terceros" class="np off" onclick="switchContable('terceros')"><i class="fa-solid fa-users"></i> Terceros</button>
+        <button id="btn-reglas" class="np off" onclick="switchContable('reglas')"><i class="fa-solid fa-book-open"></i> Reglas</button>
+      </div>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:8px 0">
+      <button onclick="document.getElementById('btn-ses').click()" title="Descarga un archivo .json con todo tu progreso actual (facturas, retenciones, consecutivo)" class="btn bs" style="font-size:.72rem;white-space:nowrap">
+        <i class="fa-solid fa-floppy-disk"></i> Guardar sesión
+      </button>
+      <button onclick="if(!window.INVS_REF||!window.INVS_REF().length||confirm('Ya tienes documentos cargados sin guardar. ¿Cargar la sesión reemplazará el trabajo actual. Continuar?'))document.getElementById('fi-ses-load').click()" title="Carga un archivo .json de sesión guardado previamente para continuar donde quedaste" class="btn bs" style="font-size:.72rem;white-space:nowrap">
+        <i class="fa-solid fa-folder-open"></i> Cargar sesión
+      </button>
+      <input type="file" id="fi-ses-load" accept=".json" style="display:none">
+      <div class="nc" onclick="openNit()"><i class="fa-solid fa-building" style="color:var(--o)"></i>NIT: <span id="hndm" style="color:var(--oh);font-weight:800">—</span></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ MÓDULO CONTABLE ═══════════════════ -->
+<div id="app-contable" style="display:flex;flex:1;max-width:1500px;width:100%;margin:0 auto;padding:24px;flex-direction:column;gap:20px">
+
+  <!-- Sub-vista XML/Siigo — WIZARD 3 PASOS -->
+  <div id="view-siigo">
+
+    <!-- ══ PANTALLA 0: Carga (pre-wizard) ══ -->
+    <div id="wiz-p0" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:20px">
+      <!-- Módulo activo badge -->
+      <div id="p0-badge" style="display:flex;align-items:center;gap:8px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:99px;padding:6px 16px">
+        <i id="p0-ico" class="fa-solid fa-cart-shopping" style="color:var(--o);font-size:.85rem"></i>
+        <span id="p0-label" style="font-size:.75rem;font-weight:800;color:var(--oh)">Módulo Compras</span>
+      </div>
+
+      <!-- Dropzone grande centrada -->
+      <div style="width:100%;max-width:560px">
+        <div id="dz-s" class="dz" style="padding:60px 40px;text-align:center;position:relative;border-radius:18px">
+          <input type="file" id="fi-s" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10" accept=".xml,.zip,.json" multiple>
+          <div id="dzc-s" style="pointer-events:none">
+            <div style="font-size:3.5rem;color:var(--o);margin-bottom:16px"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <div style="font-size:1.1rem;font-weight:800;color:var(--tx);margin-bottom:8px">Arrastra tus archivos aquí</div>
+            <div style="font-size:.78rem;color:var(--ts);margin-bottom:6px">XML · ZIP · JSON de sesión</div>
+            <div style="font-size:.68rem;color:var(--td)">Procesamiento 100% local · Ley 1581 de 2012</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hint -->
+      <div style="font-size:.7rem;color:var(--td);display:flex;align-items:center;gap:6px">
+        <i class="fa-solid fa-circle-info"></i> También puedes hacer clic sobre la zona para seleccionar archivos
+      </div>
+    </div>
+
+    <!-- ── Barra de progreso wizard (oculta hasta cargar) ── -->
+    <div id="wiz-bar" class="card" style="display:none;margin-bottom:20px;overflow:visible">
+      <div style="padding:20px 28px;display:flex;align-items:center;gap:0;position:relative">
+        <div style="position:absolute;left:calc(28px + 56px/2);right:calc(28px + 56px/2);top:50%;height:2px;background:var(--b);z-index:0"></div>
+        <div id="wiz-line" style="position:absolute;left:calc(28px + 56px/2);top:50%;height:2px;background:var(--o);z-index:1;transition:width .4s;width:0%"></div>
+        <div id="wstep-1" style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:2;cursor:pointer" onclick="goWizStep(1)">
+          <div id="wball-1" style="width:40px;height:40px;border-radius:50%;background:var(--o);border:2px solid var(--o);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:#fff;transition:all .3s">1</div>
+          <div id="wlabel-1" style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--oh);text-align:center;white-space:nowrap">Revisar</div>
+        </div>
+        <div id="wstep-2" style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:2;cursor:pointer" onclick="goWizStep(2)">
+          <div id="wball-2" style="width:40px;height:40px;border-radius:50%;background:var(--card2);border:2px solid var(--b);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:var(--td);transition:all .3s">2</div>
+          <div id="wlabel-2" style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--td);text-align:center;white-space:nowrap">Asientos Contables</div>
+        </div>
+        <div id="wstep-3" style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:2;cursor:pointer" onclick="goWizStep(3)">
+          <div id="wball-3" style="width:40px;height:40px;border-radius:50%;background:var(--card2);border:2px solid var(--b);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:var(--td);transition:all .3s">3</div>
+          <div id="wlabel-3" style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--td);text-align:center;white-space:nowrap">Retenciones</div>
+        </div>
+        <div id="wstep-4" style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:2;cursor:pointer" onclick="goWizStep(4)">
+          <div id="wball-4" style="width:40px;height:40px;border-radius:50%;background:var(--card2);border:2px solid var(--b);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;color:var(--td);transition:all .3s">4</div>
+          <div id="wlabel-4" style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--td);text-align:center;white-space:nowrap">Exportar Siigo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PASO 1: Previsualización ══ -->
+    <div id="wiz-p1" style="display:none;flex-direction:column;gap:16px">
+      <div id="ua-c"></div>
+
+      <!-- Consecutivos -->
+      <div class="card" id="consec-card">
+        <div style="padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="ib" style="background:#f9731615"><i class="fa-solid fa-gears" style="color:var(--o)"></i></div>
+            <div><div style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em">Consecutivos Siigo</div><div style="font-size:.68rem;color:var(--ts);margin-top:1px">Ingresa el último consecutivo usado en Siigo.</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="font-size:.72rem;font-weight:600;color:var(--ts);white-space:nowrap">Último en Siigo:</label>
+            <input type="number" id="consec" value="0" min="0" class="ci">
+          </div>
+        </div>
+      </div>
+
+      <!-- Previsualización de facturas -->
+      <div class="card" id="prev-card">
+        <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <i class="fa-solid fa-table-list" style="color:var(--o)"></i>
+            <span style="font-size:.82rem;font-weight:800">Previsualización de documentos</span>
+          </div>
+          <div style="flex:1;max-width:280px;margin-left:16px;position:relative">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ts);font-size:.7rem"></i>
+            <input type="text" id="inv-search" oninput="renderTbls(); setTimeout(()=>renderRetReview(), 50)" placeholder="Buscar tercero, NIT o folio..." style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:6px 14px 6px 32px;color:var(--tx);font-size:.72rem;outline:none;transition:all .2s" onfocus="this.style.borderColor='var(--o)';this.style.background='rgba(249,115,22,.05)'" onblur="this.style.borderColor='rgba(255,255,255,.1)';this.style.background='rgba(255,255,255,.05)'">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span id="flb" class="bdg bsl">0 Facturas</span>
+            <span id="blb" class="bdg bsl">Sin documentos</span>
+            <button id="btn-cl" class="btn br" style="font-size:.72rem"><i class="fa-solid fa-rotate-left"></i> Nueva carga</button>
+          </div>
+        </div>
+        <div class="ts-wrap" style="overflow-x:visible">
+          <table class="dt" style="width:100%;table-layout:fixed">
+            <colgroup>
+              <col style="width:7%"><col style="width:6%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:14%"><col style="width:11%"><col style="width:14%"><col style="width:5%">
+            </colgroup>
+            <thead><tr><th>Tipo</th><th style="text-align:center">Consec.</th><th>Folio</th><th id="th-nit">NIT Emisor</th><th style="text-align:right">Subtotal</th><th style="text-align:right">IVA</th><th style="text-align:right">Total</th><th id="th-nom">Tercero</th><th style="text-align:center">Regla</th><th style="text-align:center;color:#fb923c">Retención</th><th style="text-align:center">⌫</th></tr></thead>
+            <tbody id="prev-rows"></tbody>
+            <tfoot><tr><td colspan="4" style="text-align:right;color:var(--ts)">TOTALES</td><td id="pt-sub" style="text-align:right;color:var(--oh)">$0</td><td id="pt-iva" style="text-align:right;color:var(--oh)">$0</td><td id="pt-tot" style="text-align:right;color:#fff">$0</td><td colspan="3"></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Siguiente -->
+      <div style="display:flex;justify-content:flex-end;position:sticky;bottom:0;background:rgba(15,15,20,0.85);backdrop-filter:blur(8px);padding:14px 0;z-index:90;border-top:1px solid var(--b)">
+        <button onclick="goWizStep(2)" class="btn bo" style="padding:11px 28px;font-size:.82rem">
+          Ver Asientos <i class="fa-solid fa-arrow-right" style="margin-left:6px"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ PASO 2: Asientos Contables ══ -->
+    <div id="wiz-p2" style="display:none;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:.85rem;font-weight:800;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-receipt" style="color:var(--o)"></i> <span style="color:var(--o)">Paso 2 —</span> Asientos Contables (27 Columnas)</div>
+            <div style="font-size:.72rem;color:var(--ts);margin-top:3px">Revisa débitos y créditos antes de exportar a Siigo</div>
+          </div>
+          <div id="btn-unif-wrap" style="display:none">
+            <button id="btn-unif" onclick="toggleUnificar()" class="btn" style="background:linear-gradient(135deg,#0d6e63,#0f766e);color:#fff;border-color:#14b8a640;font-size:.78rem;padding:8px 16px">
+              <i class="fa-solid fa-layer-group"></i> Unificar Terceros
+            </button>
+          </div>
+        </div>
+        <div class="ts-wrap">
+          <table class="dt" id="acct-tbl" style="min-width:2400px">
+            <thead><tr>
+              <th style="text-align:center">C1</th><th style="text-align:center">C2</th><th>C3</th><th style="text-align:center">C4</th><th style="text-align:center">C5</th>
+              <th style="color:var(--oh)">C6 Cuenta</th><th>C7 ID</th><th style="text-align:center">C8</th><th style="text-align:center">C9</th><th style="text-align:center">C10</th>
+              <th style="text-align:center">C11</th><th style="text-align:center">C12</th><th style="text-align:center">C13</th><th style="text-align:center">C14</th><th style="text-align:center">C15</th>
+              <th>C16</th><th style="text-align:center">C17</th><th style="text-align:center">C18</th><th style="text-align:center">C19</th><th>C20 Descripción</th>
+              <th style="text-align:center">C21</th><th style="text-align:right;color:#4ade80">C22 Débito</th><th style="text-align:right;color:#c084fc">C23 Crédito</th>
+              <th>C24 Obs</th><th style="text-align:center">C25</th><th style="text-align:center">C26</th><th style="text-align:center">C27</th>
+            </tr></thead>
+            <tbody id="acct-rows"></tbody>
+            <tfoot><tr><td colspan="21" style="text-align:right;color:var(--ts)">TOTALES</td><td id="tot-dr" style="text-align:right;color:#4ade80">$0</td><td id="tot-cr" style="text-align:right;color:#c084fc">$0</td><td colspan="4"></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:rgba(15,15,20,0.85);backdrop-filter:blur(8px);padding:14px 0;z-index:90;border-top:1px solid var(--b)">
+        <button onclick="goWizStep(1)" class="btn bs" style="padding:11px 24px;font-size:.82rem">
+          <i class="fa-solid fa-arrow-left" style="margin-right:6px"></i> Volver
+        </button>
+        <button onclick="goWizStep(3)" class="btn bo" style="padding:11px 28px;font-size:.82rem">
+          Revisar Retenciones <i class="fa-solid fa-arrow-right" style="margin-left:6px"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ PASO 3: Revisión de Retenciones ══ -->
+    <div id="wiz-p3" style="display:none;flex-direction:column;gap:16px">
+      <div class="card">
+        <div style="background:linear-gradient(135deg,#431407,#92400e,#b45309);padding:22px 28px;display:flex;align-items:center;gap:16px">
+          <div class="ib" style="background:rgba(255,255,255,.15);font-size:1.2rem"><i class="fa-solid fa-shield-halved" style="color:#fff"></i></div>
+          <div style="flex:1">
+            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fed7aa;margin-bottom:4px">Paso 3 — Revisión de Retenciones</div>
+            <div style="font-size:1rem;font-weight:900;color:#fff">Verifica y ajusta las retenciones antes de exportar</div>
+            <div style="font-size:.72rem;color:#fdba74;margin-top:3px">Revisa cada factura con retención calculada — puedes cambiar la tarifa o la cuenta directamente aquí</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:.65rem;color:#fed7aa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Total retenciones</div>
+            <div id="ret-total-badge" style="font-size:1.3rem;font-weight:900;color:#fff;font-family:monospace;background:rgba(0,0,0,.2);border-radius:8px;padding:6px 16px">$0</div>
+          </div>
+        </div>
+
+        <!-- Resumen estadísticas -->
+        <div style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;border-bottom:1px solid var(--b)">
+          <div style="background:var(--card2);border-radius:10px;padding:12px 16px;text-align:center">
+            <div style="font-size:.65rem;color:var(--td);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Docs con retención</div>
+            <div id="ret-stat-con" style="font-size:1.4rem;font-weight:900;color:var(--oh)">0</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:12px 16px;text-align:center">
+            <div style="font-size:.65rem;color:var(--td);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Docs sin retención</div>
+            <div id="ret-stat-sin" style="font-size:1.4rem;font-weight:900;color:var(--ts)">0</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:12px 16px;text-align:center">
+            <div style="font-size:.65rem;color:var(--td);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Ajustados manualmente</div>
+            <div id="ret-stat-man" style="font-size:1.4rem;font-weight:900;color:#60a5fa">0</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:12px 16px;text-align:center">
+            <div style="font-size:.65rem;color:var(--td);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Revisados ✓</div>
+            <div id="ret-stat-rev" style="font-size:1.4rem;font-weight:900;color:#4ade80">0</div>
+          </div>
+        </div>
+
+        <!-- Exportar retenciones a Excel -->
+        <div style="padding:12px 20px;display:flex;justify-content:flex-end;border-bottom:1px solid var(--b)">
+          <button id="btn-ret-xlsx" class="btn bs" style="padding:8px 16px;font-size:.75rem">
+            <i class="fa-solid fa-file-excel" style="margin-right:6px;color:#4ade80"></i> Exportar Excel
+          </button>
+        </div>
+
+        <!-- Tabla de retenciones -->
+        <div class="ts-wrap">
+          <table class="dt" style="min-width:900px">
+            <thead><tr>
+              <th>Folio</th>
+              <th>Proveedor</th>
+              <th style="text-align:right">Base</th>
+              <th style="text-align:center">Tarifa aplicada</th>
+              <th style="text-align:center">Cuenta</th>
+              <th style="text-align:right;color:#c084fc">Valor retención</th>
+              <th style="text-align:center">¿Cambiar?</th>
+              <th style="text-align:center">✓ Revisado</th>
+            </tr></thead>
+            <tbody id="ret-review-rows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Documentos sin retención (colapsable) -->
+      <details class="card" style="padding:0">
+        <summary style="padding:14px 20px;cursor:pointer;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:8px;list-style:none;user-select:none">
+          <i class="fa-solid fa-circle-minus" style="color:var(--td)"></i>
+          <span style="color:var(--ts)">Documentos sin retención</span>
+          <span id="ret-noret-count" class="bdg bsl" style="margin-left:auto">0</span>
+        </summary>
+        <div class="ts-wrap" style="border-top:1px solid var(--b)">
+          <table class="dt" style="min-width:600px">
+            <thead><tr><th>Folio</th><th>Proveedor</th><th style="text-align:right">Base</th><th>Motivo</th><th style="text-align:center">Acción</th></tr></thead>
+            <tbody id="ret-noret-rows"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:rgba(15,15,20,0.85);backdrop-filter:blur(8px);padding:14px 0;z-index:90;border-top:1px solid var(--b)">
+        <button onclick="goWizStep(2)" class="btn bs" style="padding:11px 24px;font-size:.82rem">
+          <i class="fa-solid fa-arrow-left" style="margin-right:6px"></i> Volver
+        </button>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span id="ret-pending-warn" style="font-size:.72rem;color:#fbbf24;display:none"><i class="fa-solid fa-triangle-exclamation"></i> Hay retenciones sin revisar</span>
+          <button onclick="goWizStep(4)" class="btn bo" style="padding:11px 28px;font-size:.82rem">
+            Exportar Siigo <i class="fa-solid fa-arrow-right" style="margin-left:6px"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PASO 4: Exportar ══ -->
+    <div id="wiz-p4" style="display:none;flex-direction:column;gap:16px">
+      <div class="card">
+        <div style="background:linear-gradient(135deg,#431407,#7c2d12,#c2410c);padding:22px 28px;display:flex;align-items:center;gap:16px">
+          <div class="ib" style="background:rgba(255,255,255,.15);font-size:1.2rem"><i class="fa-solid fa-file-export" style="color:#fff"></i></div>
+          <div>
+            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fed7aa;margin-bottom:4px">Paso 4 — Exportar</div>
+            <div style="font-size:1rem;font-weight:900;color:#fff">Listo para exportar a Siigo</div>
+            <div style="font-size:.72rem;color:#fdba74;margin-top:3px">Copia el asiento de 27 columnas directamente al portapapeles</div>
+          </div>
+        </div>
+        <div style="padding:28px;display:flex;flex-direction:column;gap:20px">
+          <!-- Resumen -->
+          <div style="background:var(--card2);border:1px solid var(--b);border-radius:12px;padding:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div class="ib" style="background:#f9731615"><i class="fa-solid fa-file-invoice" style="color:var(--o)"></i></div>
+            <div style="flex:1">
+              <div style="font-size:.78rem;font-weight:800">Documentos listos</div>
+              <div style="font-size:.68rem;color:var(--ts);margin-top:2px">El asiento fue generado con las reglas PUC configuradas</div>
+            </div>
+            <span id="flb2" class="bdg bo2">0 documentos</span>
+            <span id="blb2" class="bdg bsl">Sin documentos</span>
+          </div>
+          <!-- Acción principal -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;background:var(--card2);border:1px solid var(--b);border-radius:14px">
+            <div style="font-size:2.5rem;color:var(--o)"><i class="fa-solid fa-copy"></i></div>
+            <div style="text-align:center">
+              <div style="font-size:.9rem;font-weight:800">Copiar para Siigo</div>
+              <div style="font-size:.72rem;color:var(--ts);margin-top:4px;line-height:1.6">Copia el asiento de 27 columnas listo para pegar directamente<br>en el importador de Siigo Contabilidad.</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+              <button id="btn-cp" class="btn bo" style="padding:13px 40px;font-size:.88rem;min-width:200px;justify-content:center">
+                <i class="fa-solid fa-copy"></i> &nbsp;Copiar Asiento Siigo
+              </button>
+              <button id="btn-xlsx" class="btn bg2" style="padding:13px 40px;font-size:.88rem;min-width:200px;justify-content:center">
+                <i class="fa-solid fa-file-excel"></i> &nbsp;Descargar Excel
+              </button>
+            </div>
+            <div style="font-size:.68rem;color:var(--td);text-align:center;max-width:420px">¿A veces el copiar/pegar no lleva todas las filas? Usa "Descargar Excel" — genera el archivo completo sin depender del portapapeles.</div>
+          </div>
+        </div>
+      </div>
+      <!-- Navegación -->
+      <div style="display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:rgba(15,15,20,0.85);backdrop-filter:blur(8px);padding:14px 0;z-index:90;border-top:1px solid var(--b)">
+        <button onclick="goWizStep(3)" class="btn bs" style="padding:11px 24px;font-size:.82rem">
+          <i class="fa-solid fa-arrow-left" style="margin-right:6px"></i> Volver a Retenciones
+        </button>
+        <button onclick="goWizStep(1)" class="btn br" style="padding:11px 22px;font-size:.82rem">
+          <i class="fa-solid fa-rotate-left" style="margin-right:6px"></i> Nueva Carga
+        </button>
+      </div>
+    </div>
+
+    <!-- Elementos ocultos requeridos por el JS original -->
+    <div style="display:none">
+      <div id="v-prev"></div>
+      <div id="v-acct"></div>
+      <div id="v-puc"><div id="puc-c"></div></div>
+      <button id="t-prev"></button>
+      <button id="t-acct"></button>
+      <button id="t-puc"></button>
+      <button id="btn-ses"></button>
+      <button id="btn-csv"></button>
+    </div>
+
+  </div>
+
+  <!-- Sub-vista Terceros -->
+  <div id="view-terceros" style="display:none;flex-direction:column;gap:20px">
+    <div class="card fi">
+      <div style="background:linear-gradient(135deg,#0d1f0f,#0f1620,#0f0f14);padding:22px 24px">
+        <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;background:#22c55e15;color:#4ade80;border:1px solid #22c55e25;padding:3px 10px;border-radius:6px">Estructuración Exógena DIAN</span>
+        <div style="font-size:1.1rem;font-weight:900;color:#fff;margin-top:10px">Lector de XML → Plantilla Excel (.xlsx)</div>
+        <div style="font-size:.75rem;color:var(--ts);margin-top:6px;line-height:1.6;max-width:700px">Sube tus facturas electrónicas. El sistema extrae <strong style="color:#4ade80">emisores y receptores</strong>, determina tipo por longitud del documento, segmenta nombres y normaliza direcciones según estándar DIAN.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div><div style="font-size:.85rem;font-weight:800;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-folder-open" style="color:var(--grn)"></i> Portal de Carga XML DIAN</div><div style="font-size:.72rem;color:var(--ts);margin-top:3px">Arrastra facturas electrónicas (.XML) o lotes comprimidos (.ZIP)</div></div>
+      </div>
+      <div style="padding:20px">
+        <div id="dz-t" class="dz dz-g" style="padding:40px;text-align:center;position:relative">
+          <input type="file" id="fi-t" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10" accept=".xml,.zip" multiple>
+          <div id="dzc-t" style="pointer-events:none">
+            <div style="font-size:2.5rem;color:var(--grn);margin-bottom:10px"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <div style="font-weight:700;color:var(--tx);margin-bottom:4px">Arrastra XMLs o ZIPs aquí</div>
+            <div style="font-size:.72rem;color:var(--td)">XMLs individuales, AttachedDocuments o paquetes .ZIP de la DIAN</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span id="t-cb" class="bdg bsl">0 Terceros</span>
+          <span id="t-eb" class="bdg bam" style="display:none">0 Empresas</span>
+          <span id="t-pb" class="bdg bpu" style="display:none">0 Personas</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btn-te" class="btn bg2" style="display:none"><i class="fa-solid fa-file-excel"></i> Exportar XLSX</button>
+          <button id="btn-tc" class="btn bs" style="display:none"><i class="fa-solid fa-copy"></i> Copiar Tabla</button>
+          <button id="btn-tl" class="btn br"><i class="fa-solid fa-rotate-left"></i> Limpiar</button>
+        </div>
+      </div>
+    </div>
+    <div id="t-res" class="card" style="display:none">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ts);display:flex;align-items:center;gap:6px"><i class="fa-solid fa-table-list" style="color:var(--grn)"></i> Directorio de Terceros Extraídos</span>
+        <span style="font-size:.68rem;color:var(--td)">Sin duplicados · Listo para copiar o exportar</span>
+      </div>
+      <div class="ts-wrap">
+        <table class="dt" style="min-width:1400px">
+          <thead><tr>
+            <th>Nro. Documento (C1)</th><th style="text-align:center">DV (C2)</th><th style="text-align:center">Cód. Doc (C3)</th>
+            <th style="text-align:center">Tipo (C4)</th><th>Razón Social (C5)</th><th>Nombres (C6)</th><th>Apellidos (C7)</th>
+            <th>Dirección (C8)</th><th style="text-align:center;color:var(--oh)">País (C9)</th>
+            <th style="text-align:center;color:#fbbf24">Dpto (C10)</th><th style="text-align:center;color:#fbbf24">Mpio (C11)</th>
+            <th style="text-align:center;color:#4ade80">Régimen (C12)</th><th style="text-align:center">Resp. Trib. (C13)</th>
+          </tr></thead>
+          <tbody id="t-tb"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub-vista Reglas -->
+  <div id="view-reglas" style="display:none;flex-direction:column;gap:20px">
+
+    <!-- Tabs principales de Configuración -->
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--b);padding:0 4px;background:var(--card);border-radius:14px 14px 0 0;overflow:hidden">
+      <button id="cfg-tab-puc" onclick="switchCfgTab('puc')" class="tb act" style="border-radius:0"><i class="fa-solid fa-book-open" style="margin-right:6px"></i>Reglas PUC</button>
+      <button id="cfg-tab-prov-rules" onclick="switchCfgTab('prov-rules')" class="tb"><i class="fa-solid fa-link" style="margin-right:6px"></i>Reglas Proveedor</button>
+      <button id="cfg-tab-ret" onclick="switchCfgTab('ret')" class="tb"><i class="fa-solid fa-percent" style="margin-right:6px"></i>Config Retención</button>
+    </div>
+
+    <!-- ══ SECCIÓN PUC ══ -->
+    <div id="cfg-puc">
+    <div class="card" id="reg-form-card">
+      <div style="background:linear-gradient(135deg,#312e81,#4338ca,#6366f1);padding:20px 24px;display:flex;align-items:center;gap:14px">
+        <div class="ib" style="background:rgba(255,255,255,.15)"><i class="fa-solid fa-wand-magic-sparkles" style="color:#fff"></i></div>
+        <div style="flex:1"><div id="rt" style="font-size:.95rem;font-weight:900;color:#fff">Nueva Regla Contable</div><div style="font-size:.68rem;color:#c7d2fe;margin-top:2px">Define cuentas PUC y asigna al módulo correspondiente</div></div>
+        <button id="btn-ce" onclick="cancelEdit()" class="btn bs" style="display:none;font-size:.72rem;padding:6px 12px"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+      </div>
+      <div style="padding:24px">
+        <input type="hidden" id="r-eid">
+        <div style="display:grid;grid-template-columns:1fr 1fr 200px;gap:14px;margin-bottom:16px">
+          <div style="grid-column:span 2"><label style="display:block;font-size:.65rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Nombre de la Regla *</label><input id="r-nom" type="text" placeholder="Ej: G/ Arrendamiento Local" maxlength="60" class="di"></div>
+          <div><label style="display:block;font-size:.65rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Módulo *</label><select id="r-mod" class="di"><option value="compras">📦 Compras</option><option value="ventas">🏪 Ventas</option></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+          <div><label style="display:block;font-size:.65rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Descripción</label><input id="r-desc" type="text" placeholder="Ej: Causación arrendamiento mensual" maxlength="100" class="di"></div>
+          <div><label style="display:block;font-size:.65rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ícono (Font Awesome)</label>
+            <div style="display:flex;gap:8px"><input id="r-ico" type="text" placeholder="fa-file-invoice" value="fa-file-invoice" class="di" style="font-family:monospace"><div id="ico-p" style="width:42px;height:42px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;color:#a5b4fc"><i class="fa-solid fa-file-invoice"></i></div></div>
+          </div>
+        </div>
+        <div style="background:var(--card3);border:1px solid var(--b);border-radius:12px;padding:18px">
+          <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ts);margin-bottom:14px">Cuentas PUC</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+            <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--td);text-transform:uppercase;margin-bottom:5px">Base Grav. 19%</label><input id="r-b19" type="text" placeholder="14350119" maxlength="20" class="di" style="font-family:monospace;font-weight:700;text-align:center;font-size:.8rem"></div>
+            <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--td);text-transform:uppercase;margin-bottom:5px">IVA 19%</label><input id="r-i19" type="text" placeholder="24080219" maxlength="20" class="di" style="font-family:monospace;font-weight:700;text-align:center;font-size:.8rem"></div>
+            <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--td);text-transform:uppercase;margin-bottom:5px">Base Grav. 5%</label><input id="r-b5" type="text" placeholder="14350105" maxlength="20" class="di" style="font-family:monospace;font-weight:700;text-align:center;font-size:.8rem"></div>
+            <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--td);text-transform:uppercase;margin-bottom:5px">IVA 5%</label><input id="r-i5" type="text" placeholder="24080205" maxlength="20" class="di" style="font-family:monospace;font-weight:700;text-align:center;font-size:.8rem"></div>
+            <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--td);text-transform:uppercase;margin-bottom:5px">Excluidos/Otros</label><input id="r-exc" type="text" placeholder="14350101" maxlength="20" class="di" style="font-family:monospace;font-weight:700;text-align:center;font-size:.8rem"></div>
+            <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--td);text-transform:uppercase;margin-bottom:5px">CxP / CxC</label><input id="r-cxp" type="text" placeholder="22050501" maxlength="20" class="di" style="font-family:monospace;font-weight:700;text-align:center;font-size:.8rem"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <button onclick="saveRegla()" class="btn bi" style="padding:10px 24px"><i class="fa-solid fa-floppy-disk"></i> <span id="r-sl">Guardar Regla</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div><div style="font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-list-check" style="color:var(--ind)"></i> Reglas Contables</div><div style="font-size:.68rem;color:var(--ts);margin-top:3px">★ = personalizada · Las predeterminadas no se pueden eliminar.</div></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="rs-q" type="text" placeholder="Buscar regla..." class="di" style="width:160px;padding:7px 12px;font-size:.75rem">
+          <select id="rs-f" class="di" style="width:150px;padding:7px 12px;font-size:.75rem"><option value="all">Todos</option><option value="compras">Solo Compras</option><option value="ventas">Solo Ventas</option><option value="custom">Personalizadas</option></select>
+        </div>
+      </div>
+      <div class="ts-wrap">
+        <table class="dt" style="min-width:900px">
+          <thead><tr><th>Regla</th><th style="text-align:center">Módulo</th><th style="text-align:center">Base 19%</th><th style="text-align:center">IVA 19%</th><th style="text-align:center">Base 5%</th><th style="text-align:center">IVA 5%</th><th style="text-align:center">Excluidos</th><th style="text-align:center">CxP/CxC</th><th style="text-align:center">Acciones</th></tr></thead>
+          <tbody id="reg-tb"></tbody>
+        </table>
+      </div>
+      <div style="padding:12px 18px;border-top:1px solid var(--b);display:flex;justify-content:space-between;align-items:center">
+        <span id="reg-cl" style="font-size:.72rem;color:var(--td)">Cargando...</span>
+        <button onclick="exportReglasJSON()" style="font-size:.72rem;color:var(--ind);font-weight:700;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="fa-solid fa-download"></i> Exportar JSON</button>
+      </div>
+    </div>
+    </div><!-- /cfg-puc -->
+
+    <!-- ══ SECCIÓN REGLAS POR PROVEEDOR ══ -->
+    <div id="cfg-prov-rules" style="display:none;flex-direction:column;gap:20px">
+      <div class="card">
+        <div style="background:linear-gradient(135deg,#065f46,#047857,#059669);padding:20px 24px;display:flex;align-items:center;gap:14px">
+          <div class="ib" style="background:rgba(255,255,255,.15)"><i class="fa-solid fa-link" style="color:#fff"></i></div>
+          <div style="flex:1"><div style="font-size:.95rem;font-weight:900;color:#fff">Reglas Fijas por Proveedor</div><div style="font-size:.68rem;color:#a7f3d0;margin-top:2px">Asigna una regla contable fija a todas las compras de un NIT específico</div></div>
+        </div>
+        <div style="padding:24px">
+          <div style="display:grid;grid-template-columns:200px 1fr auto;gap:14px;margin-bottom:16px;align-items:end">
+            <div><label style="display:block;font-size:.65rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">NIT Proveedor *</label><input id="pr-nit" type="text" placeholder="Ej: 900123456" class="di"></div>
+            <div><label style="display:block;font-size:.65rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Regla Contable Fija *</label><button id="pr-rule-btn" data-val="" onclick="openRulePopover(this, -1, 'provForm')" class="rule-btn" style="width:100%;height:36px;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--tx);padding:0 12px;border-radius:6px;cursor:pointer">Selecciona una regla contable...</button></div>
+            <div><button onclick="addProvRule()" class="btn bp" style="height:36px;padding:0 24px"><i class="fa-solid fa-plus"></i> Añadir</button></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div style="padding:18px 24px;border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-list" style="color:var(--grn)"></i> Proveedores Configurados</div></div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt" style="min-width:600px">
+            <thead><tr><th style="width:140px;padding:10px 14px;text-align:left;font-size:.68rem;color:var(--ts)">NIT Proveedor</th><th style="padding:10px 14px;text-align:left;font-size:.68rem;color:var(--ts)">Regla Fija Asignada</th><th style="width:70px;text-align:center;padding:10px 14px;font-size:.68rem;color:var(--ts)">Acción</th></tr></thead>
+            <tbody id="tb-prov-rules"></tbody>
+          </table>
+        </div>
+        <div style="padding:12px 18px;border-top:1px solid var(--b)">
+          <span id="pr-cnt" style="font-size:.72rem;color:var(--td)">0 configurados</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SECCIÓN CONFIG RETENCIÓN ══ -->
+    <div id="cfg-ret" style="display:none;flex-direction:column;gap:20px">
+
+      <!-- Header -->
+      <div class="card">
+        <div style="background:linear-gradient(135deg,#7c2d12,#9a3412,#c2410c);padding:20px 24px;display:flex;align-items:center;gap:14px">
+          <div class="ib" style="background:rgba(255,255,255,.15)"><i class="fa-solid fa-percent" style="color:#fff"></i></div>
+          <div><div style="font-size:.95rem;font-weight:900;color:#fff">Configuración de Retención en la Fuente</div><div style="font-size:.68rem;color:#fed7aa;margin-top:2px">Mis Clientes · Proveedores · Tarifas</div></div>
+        </div>
+        <!-- Sub-tabs retención -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--b);background:rgba(255,255,255,.02)">
+          <button id="ret-tab-cli" onclick="switchRetTab('cli')" class="tb act" style="font-size:.75rem"><i class="fa-solid fa-building" style="margin-right:6px"></i>Mis Clientes</button>
+          <button id="ret-tab-prov" onclick="switchRetTab('prov')" class="tb" style="font-size:.75rem"><i class="fa-solid fa-truck" style="margin-right:6px"></i>Proveedores</button>
+          <button id="ret-tab-tar" onclick="switchRetTab('tar')" class="tb" style="font-size:.75rem"><i class="fa-solid fa-tags" style="margin-right:6px"></i>Tarifas</button>
+          <button id="ret-tab-uvt" onclick="switchRetTab('uvt')" class="tb" style="font-size:.75rem"><i class="fa-solid fa-calendar-days" style="margin-right:6px"></i>UVT / Año</button>
+        </div>
+      </div>
+
+      <!-- ── SUB-TAB: MIS CLIENTES ── -->
+      <div id="ret-cli" style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div><div style="font-size:.82rem;font-weight:800;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-building" style="color:var(--o)"></i> Mis Clientes (Empresas que usan esta app)</div><div style="font-size:.68rem;color:var(--ts);margin-top:3px">Define si cada empresa es agente retenedor y su régimen tributario.</div></div>
+          </div>
+          <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;grid-template-columns:160px 1fr 180px 180px auto;gap:10px;align-items:end">
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">NIT</label><input id="cli-nit" type="text" placeholder="900123456" maxlength="15" class="di" style="font-family:monospace;font-weight:700;font-size:.82rem"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Razón Social</label><input id="cli-nom" type="text" placeholder="Empresa S.A.S." maxlength="80" class="di"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Régimen</label>
+                <select id="cli-reg" class="di" style="font-size:.78rem">
+                  <option value="ordinario">Régimen Ordinario</option>
+                  <option value="rst">RST</option>
+                </select>
+              </div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">¿Agente Retenedor?</label>
+                <select id="cli-agente" class="di" style="font-size:.78rem">
+                  <option value="si">Sí — Practica retención</option>
+                  <option value="no">No — No retiene</option>
+                </select>
+              </div>
+              <div style="padding-bottom:0"><button onclick="saveCliente()" class="btn bo" style="height:40px;white-space:nowrap"><i class="fa-solid fa-plus"></i> Agregar</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <span style="font-size:.78rem;font-weight:800;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-list" style="color:var(--o)"></i> Clientes registrados</span>
+            <span id="cli-count" class="bdg bsl">0 clientes</span>
+          </div>
+          <div class="ts-wrap">
+            <table class="dt" style="min-width:700px">
+              <thead><tr><th>NIT</th><th>Razón Social</th><th style="text-align:center">Régimen</th><th style="text-align:center">Agente Ret.</th><th style="text-align:center">Acción</th></tr></thead>
+              <tbody id="cli-tb"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SUB-TAB: PROVEEDORES ── -->
+      <div id="ret-prov" style="display:none;flex-direction:column;gap:16px">
+        <!-- Formulario proveedor -->
+        <div class="card">
+          <div class="ch"><div style="font-size:.82rem;font-weight:800;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-truck" style="color:var(--teal)"></i> Proveedores con tratamiento especial</div><div style="font-size:.68rem;color:var(--ts);margin-top:3px">Registra proveedores exentos, con tarifa particular o del RST.</div></div>
+          <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;grid-template-columns:160px 1fr 160px 160px 140px auto;gap:10px;align-items:end">
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">NIT Proveedor</label><input id="prov-nit" type="text" placeholder="800234567" maxlength="15" class="di" style="font-family:monospace;font-weight:700;font-size:.82rem"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Razón Social</label><input id="prov-nom" type="text" placeholder="Proveedor Ltda." maxlength="80" class="di"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Régimen</label>
+                <select id="prov-reg" class="di" style="font-size:.78rem">
+                  <option value="ordinario">Ordinario</option>
+                  <option value="rst">RST</option>
+                </select>
+              </div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Tipo excepción</label>
+                <select id="prov-tipo" class="di" style="font-size:.78rem">
+                  <option value="ninguna">Sin excepción</option>
+                  <option value="exento">Exento / No sujeto</option>
+                  <option value="tarifa">Tarifa particular</option>
+                </select>
+              </div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Tarifa % (si aplica)</label><input id="prov-tar" type="number" placeholder="0" min="0" max="100" step="0.01" class="di" style="font-size:.82rem"></div>
+              <div><button onclick="saveProveedor()" class="btn" style="background:linear-gradient(135deg,#0d6e63,#0f766e);color:#fff;border-color:#14b8a640;height:40px;white-space:nowrap"><i class="fa-solid fa-plus"></i> Agregar</button></div>
+            </div>
+          </div>
+        </div>
+        <!-- Tabla proveedores -->
+        <div class="card">
+          <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <span style="font-size:.78rem;font-weight:800;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-list" style="color:var(--teal)"></i> Proveedores registrados</span>
+            <span id="prov-count" class="bdg bsl">0 proveedores</span>
+          </div>
+          <div class="ts-wrap">
+            <table class="dt" style="min-width:750px">
+              <thead><tr><th>NIT</th><th>Razón Social</th><th style="text-align:center">Régimen</th><th style="text-align:center">Excepción</th><th style="text-align:center">Tarifa</th><th style="text-align:center">Acción</th></tr></thead>
+              <tbody id="prov-tb"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── EXCEPCIONES POR PRODUCTO / DESCRIPCIÓN ── -->
+        <div class="card">
+          <div style="background:linear-gradient(135deg,#1c1917,#292524);padding:16px 22px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:10px">
+            <div class="ib" style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2)"><i class="fa-solid fa-tag" style="color:#fbbf24"></i></div>
+            <div>
+              <div style="font-size:.82rem;font-weight:800">Excepciones por Producto o Descripción</div>
+              <div style="font-size:.68rem;color:var(--ts);margin-top:2px">Cuando un proveedor factura un producto específico, aplica una tarifa diferente a la general. Detectado por palabra clave en la descripción del ítem del XML.</div>
+            </div>
+          </div>
+          <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;grid-template-columns:160px 1fr 1fr 140px 160px auto;gap:10px;align-items:end">
+              <div>
+                <label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">NIT Proveedor</label>
+                <input id="pe-nit" type="text" placeholder="800234567 (vacío = todos)" maxlength="15" class="di" style="font-family:monospace;font-weight:700;font-size:.82rem">
+              </div>
+              <div>
+                <label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Palabra clave en descripción</label>
+                <input id="pe-keyword" type="text" placeholder="Ej: gasolina, honorario, transporte" maxlength="80" class="di">
+              </div>
+              <div>
+                <label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Concepto / Etiqueta</label>
+                <input id="pe-label" type="text" placeholder="Ej: G/ Combustible" maxlength="60" class="di">
+              </div>
+              <div>
+                <label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Tarifa %</label>
+                <input id="pe-tar" type="number" placeholder="1.5" min="0" max="100" step="0.01" class="di" style="font-size:.82rem">
+              </div>
+              <div>
+                <label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Cuenta contable</label>
+                <input id="pe-cta" type="text" placeholder="23654001" maxlength="20" class="di" style="font-family:monospace;font-weight:700;font-size:.82rem;text-align:center">
+              </div>
+              <div><button onclick="saveProvExcepcion()" class="btn" style="background:linear-gradient(135deg,#78350f,#b45309);color:#fff;border-color:#f59e0b40;height:40px;white-space:nowrap"><i class="fa-solid fa-plus"></i> Agregar</button></div>
+            </div>
+            <div style="font-size:.68rem;color:var(--td);display:flex;align-items:center;gap:6px"><i class="fa-solid fa-circle-info" style="color:var(--amb)"></i> Deja el NIT vacío para aplicar la excepción a <strong style="color:var(--ts)">todos los proveedores</strong> que incluyan esa palabra clave.</div>
+          </div>
+          <!-- Tabla excepciones por producto -->
+          <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <span style="font-size:.78rem;font-weight:800;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-tags" style="color:var(--amb)"></i> Excepciones por producto</span>
+            <span id="pe-count" class="bdg bsl">0 excepciones</span>
+          </div>
+          <div class="ts-wrap">
+            <table class="dt" style="min-width:700px">
+              <thead><tr><th>NIT (vacío=todos)</th><th>Palabra clave</th><th>Concepto</th><th style="text-align:center">Tarifa</th><th style="text-align:center">Cuenta</th><th style="text-align:center">Acción</th></tr></thead>
+              <tbody id="pe-tb"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SUB-TAB: UVT / AÑO ── -->
+      <div id="ret-uvt" style="display:none;flex-direction:column;gap:16px">
+        <div class="card">
+          <div style="background:linear-gradient(135deg,#1e3a5f,#1e4d8c,#1d6fa6);padding:20px 24px;display:flex;align-items:center;gap:14px">
+            <div class="ib" style="background:rgba(255,255,255,.15)"><i class="fa-solid fa-calendar-days" style="color:#fff"></i></div>
+            <div>
+              <div style="font-size:.95rem;font-weight:900;color:#fff">Valor UVT por Año Gravable</div>
+              <div style="font-size:.68rem;color:#bae6fd;margin-top:2px">Selecciona el año activo — las bases mínimas se recalculan automáticamente</div>
+            </div>
+          </div>
+          <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+            <!-- Año activo selector -->
+            <div style="background:rgba(29,111,166,.1);border:1px solid rgba(29,111,166,.3);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+              <div style="flex:1;min-width:180px">
+                <div style="font-size:.72rem;font-weight:700;color:#7dd3fc;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Año gravable activo</div>
+                <select id="uvt-year-sel" class="di" style="font-size:.9rem;font-weight:800;max-width:200px" onchange="setUVTYear(this.value)"></select>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:.65rem;font-weight:700;color:#7dd3fc;text-transform:uppercase;margin-bottom:4px">UVT activo</div>
+                <div id="uvt-active-display" style="font-size:1.5rem;font-weight:900;color:#fff;font-family:monospace;background:rgba(29,111,166,.25);border:1px solid rgba(29,111,166,.4);border-radius:10px;padding:8px 20px">$0</div>
+              </div>
+            </div>
+            <!-- Agregar nuevo año -->
+            <div style="background:var(--card2);border:1px solid var(--b);border-radius:12px;padding:16px 20px">
+              <div style="font-size:.72rem;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Agregar / actualizar año</div>
+              <div style="display:grid;grid-template-columns:140px 1fr auto;gap:10px;align-items:end">
+                <div>
+                  <label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Año</label>
+                  <input id="uvt-new-year" type="number" placeholder="2027" min="2020" max="2040" class="di" style="font-family:monospace;font-weight:800;font-size:.9rem;text-align:center">
+                </div>
+                <div>
+                  <label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Valor UVT ($)</label>
+                  <input id="uvt-new-val" type="number" placeholder="52374" min="1000" class="di" style="font-family:monospace;font-weight:800;font-size:.9rem">
+                </div>
+                <div>
+                  <button onclick="addUVTEntry()" class="btn" style="background:linear-gradient(135deg,#1e3a5f,#1d6fa6);color:#fff;border-color:#1d6fa640;height:40px;white-space:nowrap">
+                    <i class="fa-solid fa-plus"></i> Guardar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Tabla de años registrados -->
+        <div class="card">
+          <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <span style="font-size:.78rem;font-weight:800;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-table-list" style="color:#60a5fa"></i> Histórico UVT</span>
+            <span id="uvt-count" class="bdg bsl">0 años</span>
+          </div>
+          <div class="ts-wrap">
+            <table class="dt" style="min-width:400px">
+              <thead><tr>
+                <th style="text-align:center">Año</th>
+                <th style="text-align:right">Valor UVT</th>
+                <th style="text-align:center">Estado</th>
+                <th style="text-align:center">Acciones</th>
+              </tr></thead>
+              <tbody id="uvt-tb"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SUB-TAB: TARIFAS ── -->
+      <div id="ret-tar" style="display:none;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="ch"><div style="font-size:.82rem;font-weight:800;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-tags" style="color:var(--amb)"></i> Tarifas de Retención</div><div style="font-size:.68rem;color:var(--ts);margin-top:3px">Define la tarifa, la cuenta contable y la base mínima por concepto.</div></div>
+          <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;grid-template-columns:1fr 100px 140px 130px 120px auto;gap:10px;align-items:end">
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Concepto</label><input id="tar-con" type="text" placeholder="Ej: Compras generales" maxlength="80" class="di"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Tarifa %</label><input id="tar-pct" type="number" placeholder="2.5" min="0" max="100" step="0.01" class="di" style="font-size:.82rem"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Cuenta contable</label><input id="tar-cta" type="text" placeholder="23654001" maxlength="20" class="di" style="font-family:monospace;font-weight:700;font-size:.82rem;text-align:center"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px">Base mínima (UVT)</label><input id="tar-uvt" type="number" placeholder="0" min="0" step="1" class="di" style="font-size:.82rem"></div>
+              <div><label style="display:block;font-size:.62rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:5px" title="Código de impuesto Siigo — va en la columna 17 (CodImp) del asiento">Cód. Impuesto</label><input id="tar-cimp" type="text" placeholder="Ej: 7" maxlength="10" class="di" style="font-family:monospace;font-weight:700;font-size:.82rem;text-align:center"></div>
+              <div><button onclick="saveTarifa()" class="btn" style="background:linear-gradient(135deg,#92400e,#d97706);color:#fff;border-color:#f59e0b40;height:40px;white-space:nowrap"><i class="fa-solid fa-plus"></i> Agregar</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <span style="font-size:.78rem;font-weight:800;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-list" style="color:var(--amb)"></i> Tarifas registradas</span>
+            <span id="tar-count" class="bdg bsl">0 tarifas</span>
+          </div>
+          <div class="ts-wrap">
+            <table class="dt" style="min-width:650px">
+              <thead><tr><th>Concepto</th><th style="text-align:center">Tarifa</th><th style="text-align:center">Cuenta</th><th style="text-align:center">Base mín. UVT</th><th style="text-align:center">Base mín. $</th><th style="text-align:center" title="Código de impuesto Siigo — columna 17 (CodImp) del asiento">Cód. Impuesto</th><th style="text-align:center">Acción</th></tr></thead>
+              <tbody id="tar-tb"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Info box -->
+        <div style="background:rgba(245,158,11,.06);border:1px solid #f59e0b25;border-radius:12px;padding:16px 20px;display:flex;gap:12px;align-items:flex-start">
+          <i class="fa-solid fa-circle-info" style="color:var(--amb);margin-top:2px;flex-shrink:0"></i>
+          <div style="font-size:.75rem;color:var(--ts);line-height:1.7">
+            <strong style="color:var(--tx)">Tarifa por defecto (Retefuente compras generales):</strong> 2.5% → cuenta <code style="color:var(--oh)">23654001</code> · Base mín. <strong style="color:var(--tx)">27 UVT</strong><br>
+            <strong style="color:var(--tx)">ReteIVA (RST):</strong> 15% del IVA → cuenta <code style="color:var(--oh)">23670101</code> · Sin base mínima<br>
+            <span style="color:var(--td)">UVT activo: <strong id="uvt-info-val" style="color:var(--oh)">$49.799</strong> — configurable en la pestaña <strong style="color:#60a5fa">UVT / Año</strong> · Las bases mínimas se recalculan automáticamente.</span><br>
+            <span style="color:var(--td)"><strong style="color:#60a5fa">Cód. Impuesto:</strong> el código que asignes a cada tarifa (ej: <code style="color:#60a5fa">7</code>) se lleva automáticamente a la <strong style="color:var(--tx)">columna 17 (CodImp)</strong> del asiento contable cuando esa retención se aplique a una factura — tanto en la vista previa como al copiar/exportar a Siigo. Déjalo en blanco si no aplica.</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /cfg-ret -->
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-el" class="toast-el" style="display:none">
+  <i class="fa-solid fa-circle-check" id="t-ico" style="font-size:1rem;color:#4ade80"></i>
+  <span id="t-msg">¡Operación exitosa!</span>
+</div>
+
+<footer style="background:var(--card);border-top:1px solid var(--b);padding:16px;text-align:center">
+  <div style="font-size:.72rem;font-weight:700;color:var(--ts)">HATHAX by Chara Contadores | Plataforma Contable Inteligente</div>
+  <div style="font-size:.65rem;color:var(--td);margin-top:3px"></div>
+</footer>
+
+
+  <!-- POPOVER BUSCADOR DE REGLAS -->
+  <div id="rule-search-popover" style="display:none;position:absolute;z-index:9999;background:#1e1e2d;border:1px solid var(--o);border-radius:10px;box-shadow:0 15px 40px #000c, 0 0 15px rgba(249,115,22,0.2);width:280px;overflow:hidden;flex-direction:column;animation:fi 0.15s ease">
+    <div style="padding:10px;border-bottom:1px solid #334155;background:rgba(255,255,255,0.02)">
+      <input type="text" id="rule-search-input" placeholder="Buscar regla o cuenta (ej: 5135)..." style="width:100%;background:rgba(0,0,0,0.3);border:1px solid #475569;border-radius:6px;color:#fff;padding:8px 10px;font-size:0.8rem;outline:none" autocomplete="off">
+    </div>
+    <div id="rule-search-results" style="max-height:220px;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px">
+      <!-- Los resultados se llenan con JS -->
+    </div>
+  </div>
+
+</div><!-- /cc-app-root -->
+
+
+<script>
+  // HACK PARA IFRAME (v2): Forzar CSS y activar modulo
+  const urlParamsH = new URLSearchParams(window.location.search);
+  if (urlParamsH.get('empresaId')) {
+      const style = document.createElement('style');
+      style.innerHTML = '#cc-login-screen { display: none !important; } #cc-app-root { display: flex !important; } #nit-modal { display: none !important; } body { overflow: auto !important; } .nc { display: none !important; }';
+      document.head.appendChild(style);
+      
+      // Esperar a que los modulos se carguen
+      const checkAndInit = setInterval(() => {
+          if (window.selectModuleAndClose) {
+              clearInterval(checkAndInit);
+              window.selectModuleAndClose('compras');
+          }
+      }, 100);
+  }
+</script>
+</body>
+
+
+</html>

@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+LOGO HATHAX/
+*.py
+.DS_Store
+
+# Temporary Files
+hathax-landing-temp/
+hathax-landing.zip
+test_tailwind.js
+.firebase/
