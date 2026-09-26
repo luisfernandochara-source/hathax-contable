@@ -1,0 +1,156 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\froman\fcharset0 Times-Bold;\f2\fmodern\fcharset0 Courier;
+\f3\fmodern\fcharset0 Courier-Bold;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{decimal\}}{\leveltext\leveltemplateid1\'01\'00;}{\levelnumbers\'01;}\fi-360\li720\lin720 }{\listname ;}\listid1}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Aqu\'ed tienes el listado detallado, en orden, para que lo sigas t\'fa mismo o se lo des a Gemini paso a paso (mejor uno o dos bloques por vez, no todo junto):\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Bloque 1 \'97 Respaldo
+\f0\b0 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls1\ilvl0\cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	1	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Haz una copia completa de la carpeta 
+\f2\fs26 hathax-contable
+\f0\fs24  en otro lugar (o sube a un ZIP aparte).\
+\ls1\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	2	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Si no tienes git, corre 
+\f2\fs26 git init
+\f0\fs24 , luego 
+\f2\fs26 git add -A
+\f0\fs24  y 
+\f2\fs26 git commit -m "estado antes de limpieza"
+\f0\fs24 .\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Bloque 2 \'97 Scripts .py sueltos
+\f0\b0 \uc0\u8232 3. Abre cada 
+\f2\fs26 fix_*.py
+\f0\fs24  y 
+\f2\fs26 patch_*.py
+\f0\fs24  y anota en una hoja qu\'e9 hace (una l\'ednea basta: "arregl\'f3 el logo", "ajust\'f3 el CSS", etc.).\uc0\u8232 4. Crea la carpeta 
+\f2\fs26 scripts/archive/
+\f0\fs24 .\uc0\u8232 5. Mueve ah\'ed todos los 
+\f2\fs26 fix_*.py
+\f0\fs24  y 
+\f2\fs26 patch_*.py
+\f0\fs24  que ya cumplieron su funci\'f3n y no se vuelven a ejecutar.\uc0\u8232 6. Si alguno todav\'eda se usa regularmente (por ejemplo, para insertar datos o generar algo), mu\'e9velo a una carpeta 
+\f2\fs26 scripts/
+\f0\fs24  (sin el 
+\f2\fs26 /archive
+\f0\fs24 ) en vez de a la ra\'edz.\uc0\u8232 7. Borra o archiva 
+\f2\fs26 postcss.config.mjs.backup
+\f0\fs24  y cualquier otro 
+\f2\fs26 .backup
+\f0\fs24 .\
+
+\f1\b Bloque 3 \'97 Logos e im\'e1genes duplicadas
+\f0\b0 \uc0\u8232 8. Revisa 
+\f2\fs26 logo.png
+\f0\fs24 , 
+\f2\fs26 logo-hathax.png
+\f0\fs24 , 
+\f2\fs26 logo-hathax-2.png
+\f0\fs24 , 
+\f2\fs26 favicon.png
+\f0\fs24 , 
+\f2\fs26 favicon.ico
+\f0\fs24  y elige cu\'e1l es el definitivo.\uc0\u8232 9. Crea 
+\f2\fs26 public/brand/
+\f0\fs24  y pon ah\'ed solo el logo final y el favicon final.\uc0\u8232 10. Busca en tu c\'f3digo (
+\f2\fs26 Navbar.tsx
+\f0\fs24 , 
+\f2\fs26 Footer.tsx
+\f0\fs24 , 
+\f2\fs26 layout.tsx
+\f0\fs24 , y cualquier 
+\f2\fs26 index.html
+\f0\fs24  suelto en 
+\f2\fs26 modulo/
+\f0\fs24 ) todas las referencias a los logos viejos y c\'e1mbialas a la nueva ruta.\uc0\u8232 11. Borra los archivos de logo que ya no se usan (despu\'e9s de confirmar que nada los referencia).\u8232 12. Revisa la carpeta 
+\f2\fs26 public/modulo/
+\f0\fs24  \'97 ah\'ed veo otro 
+\f2\fs26 index.html
+\f0\fs24 , 
+\f2\fs26 favicon.png
+\f0\fs24  y 
+\f2\fs26 assets/
+\f0\fs24 ; decide si ese m\'f3dulo sigue vivo o es una versi\'f3n vieja que se puede archivar.\
+
+\f1\b Bloque 4 \'97 Carpeta 
+\f3\fs26 functions
+\f1\fs24  y 
+\f3\fs26 modulo-contable-src
+\f0\b0\fs24 \uc0\u8232 13. Abre 
+\f2\fs26 functions/
+\f0\fs24  y 
+\f2\fs26 modulo-contable-src/
+\f0\fs24  y confirma qu\'e9 contienen (parece backend o Firebase, seg\'fan 
+\f2\fs26 firebase.json
+\f0\fs24  y 
+\f2\fs26 firestore.rules
+\f0\fs24 ).\uc0\u8232 14. Si son parte activa del proyecto, verifica que tengan su propio 
+\f2\fs26 package.json
+\f0\fs24  o est\'e9n bien referenciadas desde el proyecto principal. Si son restos de una prueba, arch\'edvalas.\
+
+\f1\b Bloque 5 \'97 Estructura de carpetas
+\f0\b0 \uc0\u8232 15. Confirma que exista una carpeta 
+\f2\fs26 app/
+\f0\fs24  (p\'e1ginas y layouts) y 
+\f2\fs26 components/
+\f0\fs24  (componentes reutilizables) \'97 si ya las tienes por el zip que te pas\'e9, revisa que todo qued\'f3 ah\'ed y no repetido en otro lado.\uc0\u8232 16. Crea 
+\f2\fs26 lib/
+\f0\fs24  para la l\'f3gica de negocio (procesamiento de XML, reglas de retenciones PUC, etc.) si esa l\'f3gica hoy vive suelta en alg\'fan 
+\f2\fs26 .py
+\f0\fs24  o archivo de la ra\'edz.\uc0\u8232 17. Deja en la ra\'edz solo lo que debe estar ah\'ed: 
+\f2\fs26 package.json
+\f0\fs24 , 
+\f2\fs26 next.config.mjs
+\f0\fs24 , 
+\f2\fs26 jsconfig.json
+\f0\fs24 , 
+\f2\fs26 eslint.config.mjs
+\f0\fs24 , 
+\f2\fs26 .gitignore
+\f0\fs24 , 
+\f2\fs26 README.md
+\f0\fs24 .\
+
+\f1\b Bloque 6 \'97 Documentaci\'f3n
+\f0\b0 \uc0\u8232 18. Crea la carpeta 
+\f2\fs26 docs/
+\f0\fs24  y mueve ah\'ed 
+\f2\fs26 GUIA_COMPLETA_HATHAX.md
+\f0\fs24 , 
+\f2\fs26 AGENTS.md
+\f0\fs24  y 
+\f2\fs26 CLAUDE.md
+\f0\fs24 .\uc0\u8232 19. Escribe un 
+\f2\fs26 README.md
+\f0\fs24  nuevo y corto en la ra\'edz: qu\'e9 es HATHAX, c\'f3mo instalar (
+\f2\fs26 npm install
+\f0\fs24 ), c\'f3mo correr (
+\f2\fs26 npm run dev
+\f0\fs24 ) y la estructura de carpetas.\
+
+\f1\b Bloque 7 \'97 Verificaci\'f3n final
+\f0\b0 \uc0\u8232 20. Corre 
+\f2\fs26 npm run build
+\f0\fs24  y revisa que no haya errores de rutas rotas.\uc0\u8232 21. Abre 
+\f2\fs26 /
+\f0\fs24 , 
+\f2\fs26 /login
+\f0\fs24  y 
+\f2\fs26 /dashboard
+\f0\fs24  en el navegador y confirma que todo se ve y funciona igual que antes de mover archivos.\uc0\u8232 22. Si usas git, haz un commit final: 
+\f2\fs26 git add -A && git commit -m "Reorganizaci\'f3n del proyecto"
+\f0\fs24 .\
+Si quieres, te armo el prompt exacto para Gemini con el Bloque 1 y 2 nada m\'e1s, y seguimos con los siguientes bloques uno por uno en mensajes separados para no arriesgar que rompa algo de un solo golpe.\
+}
