@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, setDoc, increment } from 'firebase/firestore';
 
 export default function DashboardPage() {
   const [empresas, setEmpresas] = useState([]);
@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [userPlan, setUserPlan] = useState('Starter');
   const [maxEmpresas, setMaxEmpresas] = useState(3);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [empresasHistoricas, setEmpresasHistoricas] = useState(0);
 
 
 
@@ -34,6 +35,7 @@ export default function DashboardPage() {
       if (userSnap.exists()) {
         const data = userSnap.data();
         setUserPlan(data.plan || 'Demo');
+        setEmpresasHistoricas(data.empresasCreadasHistorico || 0);
         
         // Trial logic
         if (data.plan === 'Demo' && data.createdAt) {
@@ -117,6 +119,13 @@ export default function DashboardPage() {
         createdAt: serverTimestamp(),
         estado: 'Activa'
       });
+      
+      // Update historic counter
+      await updateDoc(doc(db, "usuarios", auth.currentUser.uid), {
+        empresasCreadasHistorico: increment(1)
+      });
+      setEmpresasHistoricas(prev => prev + 1);
+      
       resetForm();
       fetchEmpresas(auth.currentUser.uid); // Recargar la lista
     } catch (error) {
@@ -128,11 +137,18 @@ export default function DashboardPage() {
 
 
   const handleOpenNuevaEmpresa = () => {
-    if (empresas.length >= maxEmpresas) {
-      setIsUpgradeModalOpen(true);
+    if (userPlan === 'Demo') {
+      if (empresasHistoricas >= maxEmpresas || empresas.length >= maxEmpresas) {
+        setIsUpgradeModalOpen(true);
+        return;
+      }
     } else {
-      setIsModalOpen(true);
+      if (empresas.length >= maxEmpresas) {
+        setIsUpgradeModalOpen(true);
+        return;
+      }
     }
+    setIsModalOpen(true);
   };
 
   const openEditModal = (e, emp) => {
